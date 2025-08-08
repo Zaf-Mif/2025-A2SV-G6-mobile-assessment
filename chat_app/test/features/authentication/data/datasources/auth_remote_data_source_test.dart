@@ -44,7 +44,7 @@ void main() {
             body: jsonEncode({'email': email, 'password': password}),
           ),
         ).thenAnswer(
-          (_) async => http.Response(fixture('login_response.json'), 200),
+          (_) async => http.Response(fixture('login_response.json'), 201),
         );
 
         // act
@@ -56,7 +56,7 @@ void main() {
     );
 
     test(
-      'should throw a ServerException when the response code is not 200',
+      'should throw a ServerException when the response code is not 201',
       () async {
         // arrange
         when(
@@ -88,7 +88,7 @@ void main() {
     );
 
     test(
-      'should return UserModel when the response code is 200 (success)',
+      'should return UserModel when the response code is 201 (success)',
       () async {  
         // arrange
         when(
@@ -111,7 +111,7 @@ void main() {
     );
 
     test(
-      'should throw a ServerException when the response code is not 200',
+      'should throw a ServerException when the response code is not 201',
       () async {
         // arrange
         when(

@@ -25,6 +25,6 @@ class SignUpParams {
   const SignUpParams({
     required this.name,
     required this.email,
-    required this.password,
+    required this.password, required String id,
   });
 }

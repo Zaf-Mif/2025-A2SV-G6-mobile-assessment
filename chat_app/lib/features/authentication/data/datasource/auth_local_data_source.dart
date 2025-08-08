@@ -8,6 +8,8 @@ abstract class AuthLocalDataSource {
   Future<void> cacheUser(UserModel user);
   Future<UserModel> getCachedUser();
   Future<void> clearUser();
+  Future<String> getToken();
+  Future<bool> hasToken();
 }
 
 class AuthLocalDataSourceImpl implements AuthLocalDataSource {
@@ -46,5 +48,29 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     if (!userRemoved || !tokenRemoved) {
       throw CacheException();
     }
+  }
+
+  @override
+  Future<bool> hasToken() async {
+    final jsonString = sharedPreferences.getString(cachedUserKey);
+    if (jsonString == null) return false;
+
+    final jsonMap = json.decode(jsonString);
+    final token = jsonMap['token']; 
+    return token != null && token is String && token.isNotEmpty;
+  }
+
+  @override
+  Future<String> getToken() async {
+    final jsonString = sharedPreferences.getString('CACHED_USER');
+    if (jsonString == null) throw CacheException();
+
+    final jsonMap = json.decode(jsonString);
+    final token = jsonMap['token'];
+    if (token == null || token is! String || token.isEmpty) {
+      throw CacheException();
+    }
+
+    return token;
   }
 }

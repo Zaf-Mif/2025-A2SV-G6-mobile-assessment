@@ -1,7 +1,10 @@
 {
-  "user": {
-    "id": 1,
-    "name": "Test User",
-    "email": "test@example.com"
+  "statusCode": 200,
+  "message": "",
+  "data": {
+    "_id": "66bde36e9bbe07fc39034cdd",
+    "name": "Mr. User",
+    "email": "user@gmail.com",
+    "__v": 0
   }
 }

@@ -8,6 +8,9 @@ abstract class Failure extends Equatable {
 
   @override
   List<Object?> get props => [message];
+
+  @override
+  String toString() => 'Failure(message: $message)';
 }
 
 // General failures

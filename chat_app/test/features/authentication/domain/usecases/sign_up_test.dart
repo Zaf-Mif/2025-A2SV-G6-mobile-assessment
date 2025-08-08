@@ -31,7 +31,7 @@ void main() {
 
     // act
     final result = await usecase(
-        const SignUpParams(name: tName, email: tEmail, password: tPassword));
+        const SignUpParams(id: '', name: tName, email: tEmail, password: tPassword));
 
     // assert
     expect(result, equals(const Right(tUser)));

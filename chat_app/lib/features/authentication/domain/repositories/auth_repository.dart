@@ -8,4 +8,6 @@ abstract class AuthRepository {
   Future<Either<Failure, User>> login(String email, String password);
   Future<Either<Failure, User>> signUp(String name, String email, String password);
   Future<Either<Failure, void>> logout();
+  Future<Either<Failure, bool>> isAuthenticated();
+  Future<Either<Failure, User>> getMe();
 }

@@ -23,7 +23,10 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, User>> login(String email, String password) async {
     if (await networkInfo.isConnected) {
       try {
-        final remoteUser = await remoteDataSource.login(email: email, password: password);
+        final remoteUser = await remoteDataSource.login(
+          email: email,
+          password: password,
+        );
         await localDataSource.cacheUser(remoteUser);
         return Right(remoteUser);
       } on ServerException {
@@ -40,7 +43,11 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, User>> signUp(String name, String email, String password) async {
+  Future<Either<Failure, User>> signUp(
+    String name,
+    String email,
+    String password,
+  ) async {
     if (await networkInfo.isConnected) {
       try {
         final remoteUser = await remoteDataSource.signUp(
@@ -54,7 +61,7 @@ class AuthRepositoryImpl implements AuthRepository {
         return const Left(ServerFailure());
       }
     } else {
-      return  const Left( NetworkFailure());
+      return const Left(NetworkFailure());
     }
   }
 
@@ -64,6 +71,26 @@ class AuthRepositoryImpl implements AuthRepository {
       await localDataSource.clearUser();
       return const Right(null);
     } catch (_) {
+      return const Left(CacheFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, User>> getMe() async {
+    try {
+      final user = await localDataSource.getCachedUser();
+      return Right(user);
+    } on CacheException {
+      return const Left(CacheFailure());
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> isAuthenticated() async {
+    try {
+      final hasToken = await localDataSource.hasToken();
+      return Right(hasToken);
+    } on CacheException {
       return const Left(CacheFailure());
     }
   }
