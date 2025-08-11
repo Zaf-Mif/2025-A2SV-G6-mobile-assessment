@@ -34,3 +34,11 @@ class CacheFailure extends Failure {
 class NoInternetFailure extends Failure {
   const NoInternetFailure([super.message]);
 }
+
+class UserNotFoundFailure extends Failure {
+  const UserNotFoundFailure([super.message]);
+}
+
+class WrongPasswordFailure extends Failure {
+  const WrongPasswordFailure([super.message]);
+}

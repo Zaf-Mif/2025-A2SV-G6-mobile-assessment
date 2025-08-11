@@ -17,11 +17,12 @@ class _SignInPageState extends State<SignInPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
+  bool _authChecked = false; // stops looping
+
   @override
-  void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    context.read<AuthBloc>().add(AppStarted()); // check if already logged in
   }
 
   void _onLoginPressed() {
@@ -32,109 +33,119 @@ class _SignInPageState extends State<SignInPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
+    return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is Authenticated) {
           Navigator.pushReplacementNamed(context, '/home');
-        }
-        if (state is AuthError) {
+        } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.message)),
           );
+        } else if (state is Unauthenticated && !_authChecked) {
+          setState(() => _authChecked = true);
         }
       },
-      child: Scaffold(
-        body: SingleChildScrollView(
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                children: [
-                  const SizedBox(height: 122),
+      builder: (context, state) {
+        // While checking authentication at startup
+        if (!_authChecked && (state is AuthLoading || state is AuthInitial)) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-                  // Logo
-                  Container(
-                    width: 144,
-                    height: 50,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      color: Colors.white,
-                      border: Border.all(color: const Color(0xFF3F51F3), width: 0.93),
-                    ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        'ECOM',
-                        style: GoogleFonts.caveatBrush(
-                          fontSize: 120,
-                          fontWeight: FontWeight.w400,
-                          letterSpacing: 2.0,
+        // Show sign in UI
+        return Scaffold(
+          body: SingleChildScrollView(
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 122),
+
+                    // Logo
+                    Container(
+                      width: 144,
+                      height: 50,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: Colors.white,
+                        border: Border.all(
                           color: const Color(0xFF3F51F3),
+                          width: 0.93,
                         ),
                       ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 80),
-
-                  // Title
-                  Text(
-                    'Sign into your account',
-                    style: GoogleFonts.poppins(
-                      fontSize: 27,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-
-                  const SizedBox(height: 51),
-
-                  // SignInForm with validation & loading
-                  BlocBuilder<AuthBloc, AuthState>(
-                    builder: (context, state) {
-                      return SignInForm(
-                        emailController: emailController,
-                        passwordController: passwordController,
-                        onLoginPressed: _onLoginPressed,
-                        isLoading: state is AuthLoading,
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 152),
-
-                  // Sign up link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Don't have an account? ",
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(context, '/sign-up');
-                        },
-                        child: const Text(
-                          'SIGN UP',
-                          style: TextStyle(
-                            color: Color(0xff3F51F3),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'ECOM',
+                          style: GoogleFonts.caveatBrush(
+                            fontSize: 120,
                             fontWeight: FontWeight.w400,
+                            letterSpacing: 2.0,
+                            color: const Color(0xFF3F51F3),
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+
+                    const SizedBox(height: 80),
+
+                    // Title
+                    Text(
+                      'Sign into your account',
+                      style: GoogleFonts.poppins(
+                        fontSize: 27,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                    const SizedBox(height: 51),
+
+                    // Form
+                    SignInForm(
+                      emailController: emailController,
+                      passwordController: passwordController,
+                      onLoginPressed: _onLoginPressed,
+                      isLoading: state is AuthLoading,
+                    ),
+
+                    const SizedBox(height: 152),
+
+                    // Sign up link
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Don't have an account? ",
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/sign-up');
+                          },
+                          child: const Text(
+                            'SIGN UP',
+                            style: TextStyle(
+                              color: Color(0xff3F51F3),
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

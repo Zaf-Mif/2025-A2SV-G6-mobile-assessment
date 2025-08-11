@@ -130,7 +130,7 @@ group('AuthBloc - SignUpEvent', () {
       when(() => mockSignup.call(any())).thenAnswer((_) async => const Right(tUser));
       return bloc;
     },
-    act: (bloc) => bloc.add(const SignUpEvent(tName, tEmail, tPassword)),
+    act: (bloc) => bloc.add(const SignUpEvent(tName, tEmail, tPassword, )),
     expect: () => [AuthLoading(), Authenticated()],
     verify: (_) {
       verify(() => mockSignup.call(const SignUpParams(id: '', name: tName, email: tEmail, password: tPassword))).called(1);
