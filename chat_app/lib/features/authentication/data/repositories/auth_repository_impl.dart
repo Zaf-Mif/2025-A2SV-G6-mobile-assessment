@@ -20,43 +20,27 @@ class AuthRepositoryImpl implements AuthRepository {
   });
 
   @override
-  Future<Either<Failure, User>> login(String email, String password) async {
+  Future<Either<Failure, String>> login(String email, String password) async {
     if (await networkInfo.isConnected) {
       try {
-        final remoteUser = await remoteDataSource.login(
-          email: email,
-          password: password,
-        );
-        await localDataSource.cacheUser(remoteUser);
-        return Right(remoteUser);
+        final token = await remoteDataSource.login(email: email, password: password);
+        await localDataSource.cacheToken(token);
+        return Right(token);
       } on ServerException {
         return const Left(ServerFailure());
       }
     } else {
-      try {
-        final localUser = await localDataSource.getCachedUser();
-        return Right(localUser);
-      } on CacheException {
-        return const Left(CacheFailure());
-      }
+      return const Left(NetworkFailure());
     }
   }
 
   @override
-  Future<Either<Failure, User>> signUp(
-    String name,
-    String email,
-    String password,
-  ) async {
+  Future<Either<Failure, User>> signUp(String name, String email, String password) async {
     if (await networkInfo.isConnected) {
       try {
-        final remoteUser = await remoteDataSource.signUp(
-          name: name,
-          email: email,
-          password: password,
-        );
-        await localDataSource.cacheUser(remoteUser);
-        return Right(remoteUser);
+        final user = await remoteDataSource.signUp(name: name, email: email, password: password);
+        await localDataSource.cacheUser(user);
+        return Right(user);
       } on ServerException {
         return const Left(ServerFailure());
       }
@@ -68,6 +52,7 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, void>> logout() async {
     try {
+      await localDataSource.clearToken();
       await localDataSource.clearUser();
       return const Right(null);
     } catch (_) {
@@ -75,15 +60,15 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
-  @override
-  Future<Either<Failure, User>> getMe() async {
-    try {
-      final user = await localDataSource.getCachedUser();
-      return Right(user);
-    } on CacheException {
-      return const Left(CacheFailure());
-    }
-  }
+  // @override
+  // Future<Either<Failure, User>> getMe() async {
+  //   try {
+  //     final user = await localDataSource.getCachedUser();
+  //     return Right(user);
+  //   } on CacheException {
+  //     return const Left(CacheFailure());
+  //   }
+  // }
 
   @override
   Future<Either<Failure, bool>> isAuthenticated() async {
@@ -92,6 +77,26 @@ class AuthRepositoryImpl implements AuthRepository {
       return Right(hasToken);
     } on CacheException {
       return const Left(CacheFailure());
+    }
+  }
+  
+  @override
+  Future<Either<Failure, User>> getCurrentUser(String token) async {
+    if (await networkInfo.isConnected) {
+      try {
+        final user = await remoteDataSource.getCurrentUser(token);
+        await localDataSource.cacheUser(user);
+        return Right(user);
+      } on ServerException {
+        return const Left(ServerFailure());
+      }
+    } else {
+      try {
+        final cachedUser = await localDataSource.getCachedUser();
+        return Right(cachedUser);
+      } on CacheException {
+        return const Left(CacheFailure());
+      }
     }
   }
 }

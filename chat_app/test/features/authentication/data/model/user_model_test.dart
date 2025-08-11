@@ -8,6 +8,7 @@ import '../../../../helpers/fixtures/fixture_reader.dart';
 
 void main() {
   late UserModel userModel;
+
   setUp(() {
     userModel = const UserModel(
       id: '1',
@@ -36,12 +37,16 @@ void main() {
       // act
       final result = userModel.toJson();
 
+      // expected map matches the toJson implementation
+      final expectedMap = {
+        'user': {
+          'id': '1',
+          'name': 'Test User',
+          'email': 'test@example.com',
+        },
+      };
+
       // assert
-      final expectedMap = {'user': {
-        'id': '1',
-        'name': 'Test User',
-        'email': 'test@example.com',
-      }};
       expect(result, equals(expectedMap));
     });
   });

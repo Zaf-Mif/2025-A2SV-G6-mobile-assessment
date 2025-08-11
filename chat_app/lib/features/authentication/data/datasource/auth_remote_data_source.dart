@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 import '../../core/error/exceptions.dart';
@@ -7,7 +8,7 @@ import '../models/user_model.dart';
 abstract class AuthRemoteDataSource {
   /// Calls the POST /login endpoint.
   /// Throws a [ServerException] for all error codes.
-  Future<UserModel> login({required String email, required String password});
+  Future<String> login({required String email, required String password});
 
   /// Calls the POST /register endpoint.
   /// Throws a [ServerException] for all error codes.
@@ -30,7 +31,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       'https://g5-flutter-learning-path-be.onrender.com/api/v2/';
 
   @override
-  Future<UserModel> login({
+  Future<String> login({
     required String email,
     required String password,
   }) async {
@@ -42,7 +43,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
     if (response.statusCode == 201) {
       final data = json.decode(response.body);
-      return UserModel.fromJson(data);
+      final token = data['data']['access_token'] as String;
+      return token;  
     } else {
       throw ServerException();
     }
@@ -79,8 +81,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     );
 
     if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return UserModel.fromJson(data);
+      final jsonResponse = json.decode(response.body);
+    // Extract the nested "data" field from the response before passing to the model
+      final userData = jsonResponse['data'];
+      return UserModel.fromMeJson(userData);
     } else {
       throw ServerException();
     }

@@ -16,6 +16,7 @@ class MockLocalDataSource extends Mock implements AuthLocalDataSource {}
 class MockNetworkInfo extends Mock implements NetworkInfo {}
 
 class FakeUserModel extends Fake implements UserModel {}
+
 void main() {
   late AuthRepositoryImpl repository;
   late MockRemoteDataSource mockRemoteDataSource;
@@ -42,18 +43,21 @@ void main() {
   const testName = 'Test User';
 
   const testUserModel = UserModel(id: '1', name: testName, email: testEmail);
-  const User testUser = testUserModel; // Since UserModel extends User
+  const User testUser = testUserModel;
+
+  const testToken = 'test_token';
 
   group('login', () {
     test('should check if device is online', () async {
       when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
       when(() => mockRemoteDataSource.login(email: any(named: 'email'), password: any(named: 'password')))
-          .thenAnswer((_) async => testUserModel);
-      when(() => mockLocalDataSource.cacheUser(any())).thenAnswer((_) async => Future.value());
+          .thenAnswer((_) async => testToken);
+      when(() => mockLocalDataSource.cacheToken(any())).thenAnswer((_) async => Future.value());
 
-      await repository.login(testEmail, testPassword);
+      final result = await repository.login(testEmail, testPassword);
 
       verify(() => mockNetworkInfo.isConnected).called(1);
+      expect(result.isRight(), true);
     });
 
     group('device online', () {
@@ -61,27 +65,27 @@ void main() {
         when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
       });
 
-      test('should return remote data when call to remote datasource is successful', () async {
+      test('should return token when remote login is successful', () async {
         when(() => mockRemoteDataSource.login(email: testEmail, password: testPassword))
-            .thenAnswer((_) async => testUserModel);
-        when(() => mockLocalDataSource.cacheUser(testUserModel))
+            .thenAnswer((_) async => testToken);
+        when(() => mockLocalDataSource.cacheToken(testToken))
             .thenAnswer((_) async => Future.value());
 
         final result = await repository.login(testEmail, testPassword);
 
         verify(() => mockRemoteDataSource.login(email: testEmail, password: testPassword)).called(1);
-        verify(() => mockLocalDataSource.cacheUser(testUserModel)).called(1);
-        expect(result, equals(const Right(testUser)));
+        verify(() => mockLocalDataSource.cacheToken(testToken)).called(1);
+        expect(result, equals(Right(testToken)));
       });
 
-      test('should return ServerFailure when call to remote datasource throws ServerException', () async {
+      test('should return ServerFailure when remote login throws ServerException', () async {
         when(() => mockRemoteDataSource.login(email: testEmail, password: testPassword))
             .thenThrow(ServerException());
 
         final result = await repository.login(testEmail, testPassword);
 
         verify(() => mockRemoteDataSource.login(email: testEmail, password: testPassword)).called(1);
-        verifyNever(() => mockLocalDataSource.cacheUser(any()));
+        verifyNever(() => mockLocalDataSource.cacheToken(any()));
         expect(result, equals(const Left(ServerFailure())));
       });
     });
@@ -91,26 +95,11 @@ void main() {
         when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => false);
       });
 
-      test('should return cached data when cached data is present', () async {
-        when(() => mockLocalDataSource.getCachedUser())
-            .thenAnswer((_) async => testUserModel);
-
+      test('should return NetworkFailure when device is offline', () async {
         final result = await repository.login(testEmail, testPassword);
 
-        verifyNever(() => mockRemoteDataSource.login(email: testEmail, password: testPassword));
-        verify(() => mockLocalDataSource.getCachedUser()).called(1);
-        expect(result, equals(const Right(testUser)));
-      });
-
-      test('should return CacheFailure when there is no cached data', () async {
-        when(() => mockLocalDataSource.getCachedUser())
-            .thenThrow(CacheException());
-
-        final result = await repository.login(testEmail, testPassword);
-
-        verifyNever(() => mockRemoteDataSource.login(email: testEmail, password: testPassword));
-        verify(() => mockLocalDataSource.getCachedUser()).called(1);
-        expect(result, equals(const Left(CacheFailure())));
+        verifyNever(() => mockRemoteDataSource.login(email: any(named: 'email'), password: any(named: 'password')));
+        expect(result, equals(const Left(NetworkFailure())));
       });
     });
   });
@@ -122,9 +111,10 @@ void main() {
           .thenAnswer((_) async => testUserModel);
       when(() => mockLocalDataSource.cacheUser(any())).thenAnswer((_) async => Future.value());
 
-      await repository.signUp(testName, testEmail, testPassword);
+      final result = await repository.signUp(testName, testEmail, testPassword);
 
       verify(() => mockNetworkInfo.isConnected).called(1);
+      expect(result.isRight(), true);
     });
 
     group('device online', () {
@@ -132,7 +122,7 @@ void main() {
         when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
       });
 
-      test('should return remote data when call to remote datasource is successful', () async {
+      test('should return user when remote signUp is successful', () async {
         when(() => mockRemoteDataSource.signUp(name: testName, email: testEmail, password: testPassword))
             .thenAnswer((_) async => testUserModel);
         when(() => mockLocalDataSource.cacheUser(testUserModel))
@@ -142,10 +132,10 @@ void main() {
 
         verify(() => mockRemoteDataSource.signUp(name: testName, email: testEmail, password: testPassword)).called(1);
         verify(() => mockLocalDataSource.cacheUser(testUserModel)).called(1);
-        expect(result, equals(const Right(testUser)));
+        expect(result, equals(Right(testUser)));
       });
 
-      test('should return ServerFailure when call to remote datasource throws ServerException', () async {
+      test('should return ServerFailure when remote signUp throws ServerException', () async {
         when(() => mockRemoteDataSource.signUp(name: testName, email: testEmail, password: testPassword))
             .thenThrow(ServerException());
 
@@ -165,28 +155,93 @@ void main() {
       test('should return NetworkFailure when device is offline', () async {
         final result = await repository.signUp(testName, testEmail, testPassword);
 
-        verifyNever(() => mockRemoteDataSource.signUp(name: testName, email: testEmail, password: testPassword));
+        verifyNever(() => mockRemoteDataSource.signUp(name: any(named: 'name'), email: any(named: 'email'), password: any(named: 'password')));
         expect(result, equals(const Left(NetworkFailure())));
       });
     });
   });
 
   group('logout', () {
-    test('should clear cached user and return Right(null) on success', () async {
+    test('should clear cached user and token and return Right(null) on success', () async {
+      when(() => mockLocalDataSource.clearToken()).thenAnswer((_) async => Future.value());
       when(() => mockLocalDataSource.clearUser()).thenAnswer((_) async => Future.value());
 
       final result = await repository.logout();
 
+      verify(() => mockLocalDataSource.clearToken()).called(1);
       verify(() => mockLocalDataSource.clearUser()).called(1);
       expect(result, equals(const Right(null)));
     });
 
-    test('should return CacheFailure when clearUser throws an exception', () async {
+    test('should return CacheFailure when clearToken throws exception', () async {
+      when(() => mockLocalDataSource.clearToken()).thenThrow(Exception());
+
+      final result = await repository.logout();
+
+      verify(() => mockLocalDataSource.clearToken()).called(1);
+      // It might or might not call clearUser depending on implementation flow. Adjust if needed
+      expect(result, equals(const Left(CacheFailure())));
+    });
+
+    test('should return CacheFailure when clearUser throws exception', () async {
+      when(() => mockLocalDataSource.clearToken()).thenAnswer((_) async => Future.value());
       when(() => mockLocalDataSource.clearUser()).thenThrow(Exception());
 
       final result = await repository.logout();
 
+      verify(() => mockLocalDataSource.clearToken()).called(1);
       verify(() => mockLocalDataSource.clearUser()).called(1);
+      expect(result, equals(const Left(CacheFailure())));
+    });
+  });
+
+  group('getCurrentUser', () {
+    test('should get user from remote when online and cache it', () async {
+      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
+      when(() => mockRemoteDataSource.getCurrentUser(testToken))
+          .thenAnswer((_) async => testUserModel);
+      when(() => mockLocalDataSource.cacheUser(testUserModel))
+          .thenAnswer((_) async => Future.value());
+
+      final result = await repository.getCurrentUser(testToken);
+
+      verify(() => mockNetworkInfo.isConnected).called(1);
+      verify(() => mockRemoteDataSource.getCurrentUser(testToken)).called(1);
+      verify(() => mockLocalDataSource.cacheUser(testUserModel)).called(1);
+      expect(result, equals(Right(testUser)));
+    });
+
+    test('should get cached user when offline', () async {
+      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => false);
+      when(() => mockLocalDataSource.getCachedUser())
+          .thenAnswer((_) async => testUserModel);
+
+      final result = await repository.getCurrentUser(testToken);
+
+      verify(() => mockNetworkInfo.isConnected).called(1);
+      verifyNever(() => mockRemoteDataSource.getCurrentUser(any()));
+      verify(() => mockLocalDataSource.getCachedUser()).called(1);
+      expect(result, equals(Right(testUser)));
+    });
+
+    test('should return ServerFailure when remote throws ServerException', () async {
+      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => true);
+      when(() => mockRemoteDataSource.getCurrentUser(testToken))
+          .thenThrow(ServerException());
+
+      final result = await repository.getCurrentUser(testToken);
+
+      verify(() => mockRemoteDataSource.getCurrentUser(testToken)).called(1);
+      expect(result, equals(const Left(ServerFailure())));
+    });
+
+    test('should return CacheFailure when no cached user is present', () async {
+      when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => false);
+      when(() => mockLocalDataSource.getCachedUser()).thenThrow(CacheException());
+
+      final result = await repository.getCurrentUser(testToken);
+
+      verify(() => mockLocalDataSource.getCachedUser()).called(1);
       expect(result, equals(const Left(CacheFailure())));
     });
   });

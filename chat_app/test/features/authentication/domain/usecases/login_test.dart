@@ -1,12 +1,8 @@
-// test/features/auth/domain/usecases/login_test.dart
-
-import 'package:chat_app/features/authentication/domain/entities/user.dart';
 import 'package:chat_app/features/authentication/domain/repositories/auth_repository.dart';
 import 'package:chat_app/features/authentication/domain/usecases/login.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-
 
 class MockAuthRepository extends Mock implements AuthRepository {}
 
@@ -21,18 +17,18 @@ void main() {
 
   const tEmail = 'test@example.com';
   const tPassword = 'password123';
-  const tUser = User(id: '1', name: 'Test User', email: tEmail);
+  const tToken = 'test_token';
 
-  test('should return User when login is successful', () async {
+  test('should return token string when login is successful', () async {
     // arrange
     when(() => mockAuthRepository.login(tEmail, tPassword))
-        .thenAnswer((_) async => const Right(tUser));
+        .thenAnswer((_) async => const Right(tToken));
 
     // act
     final result = await usecase(const LoginParams(email: tEmail, password: tPassword));
 
     // assert
-    expect(result, equals(const Right(tUser)));
+    expect(result, equals(const Right(tToken)));
     verify(() => mockAuthRepository.login(tEmail, tPassword)).called(1);
     verifyNoMoreInteractions(mockAuthRepository);
   });

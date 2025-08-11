@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
@@ -7,12 +8,12 @@ import 'features/authentication/core/platform/network_info.dart';
 import 'features/authentication/data/datasource/auth_local_data_source.dart';
 import 'features/authentication/data/datasource/auth_remote_data_source.dart';
 import 'features/authentication/data/repositories/auth_repository_impl.dart';
+import 'features/authentication/domain/repositories/auth_repository.dart';
 import 'features/authentication/domain/usecases/check_authenticated_user.dart';
 import 'features/authentication/domain/usecases/login.dart';
 import 'features/authentication/domain/usecases/logout.dart';
 import 'features/authentication/domain/usecases/sign_up.dart';
 import 'features/authentication/presentation/bloc/auth_bloc.dart';
-
 final sl = GetIt.instance;
 
 Future<void> init() async {
@@ -34,7 +35,7 @@ Future<void> init() async {
   sl.registerLazySingleton(() => CheckAuthenticatedUser(sl()));
 
   // Repository
-  sl.registerLazySingleton(
+  sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(
       remoteDataSource: sl(),
       localDataSource: sl(),
@@ -51,11 +52,23 @@ Future<void> init() async {
   );
   
   //! core
-  sl.registerLazySingleton(() => NetworkInfoImpl(sl()));
+  // sl.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl(sl()));
 
   //! External
   final sharedPreferences = await SharedPreferences.getInstance();
   sl.registerLazySingleton(() => sharedPreferences);
   sl.registerLazySingleton(() => http.Client());
-  sl.registerLazySingleton(() => InternetConnectionChecker());
+  if (!kIsWeb) {
+    // On mobile: register real InternetConnectionChecker and NetworkInfoImpl
+    sl.registerLazySingleton<InternetConnectionChecker>(
+        () => InternetConnectionChecker.createInstance());
+    sl.registerLazySingleton<NetworkInfo>(
+      () => NetworkInfoImpl(sl()),
+    );
+  } else {
+    // On web: register a fake NetworkInfo that always returns true (or your own logic)
+    sl.registerLazySingleton<NetworkInfo>(
+      () => NetworkInfoFake(),
+    );
+  }
 }

@@ -136,7 +136,7 @@ void main() {
   group('getCurrentUser', () {
     const token = 'valid_token';
 
-    final userModel = UserModel.fromJson(
+    final userModel = UserModel.fromMeJson(
       json.decode(fixture('get_me_response.json')),
     );
 
